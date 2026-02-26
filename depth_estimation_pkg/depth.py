@@ -19,8 +19,10 @@ import torch
 from PIL import Image
 from transformers import AutoImageProcessor, AutoModelForDepthEstimation
 
-# calibration: multiply model output by this - to be adjusted
-DEPTH_SCALE = 0.075
+# calibration: real_depth = scale * model_output + offset
+# measured: 0.5m -> 1.045, 1.0m -> 1.185 (mac webcam)
+DEPTH_SCALE = 3.57
+DEPTH_OFFSET = -3.23
 
 class DepthEstimator:
     """
@@ -29,14 +31,20 @@ class DepthEstimator:
     each pixel value = dist from camera in m
     """
 
-    def __init__(self, device=None, scale=DEPTH_SCALE):
+    def __init__(self, device=None, scale=DEPTH_SCALE, offset=DEPTH_OFFSET):
         # init depth estimator
         # args: device: cuda for GPU, cpu, or None for auto detect
 
         if device is None:
-            device = 'cuda' if torch.cuda.is_available() else 'cpu'
-        self.device = torch.device(device) # object that represents hardware location
+            if torch.cuda.is_available():
+                device = 'cuda'
+            elif torch.backends.mps.is_available():
+                device = 'mps'
+            else:
+                device = 'cpu'
+        self.device = torch.device(device)
         self.scale = scale
+        self.offset = offset
 
         # load model from hugging face, downloads model weights on first run
         model_name = "Intel/zoedepth-nyu-kitti"
@@ -78,7 +86,7 @@ class DepthEstimator:
 
         # convert from pytorch tensor to numpy arr
         depth_map = prediction.squeeze().cpu().numpy()
-        depth_map = depth_map * self.scale
+        depth_map = depth_map * self.scale + self.offset
 
         return depth_map
     

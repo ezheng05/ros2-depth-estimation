@@ -38,18 +38,17 @@ Visualization node subscribes to all topics, combines into three-panel display a
 
 ## How to run
 
-Full system:
+Build:
 ```bash
 source /opt/ros/jazzy/setup.bash
-source ~/ros2_ws/install/setup.bash
-ros2 launch depth_estimation_pkg depth_estimation_with_direction_launch.py
-```
-
-After code changes:
-```bash
-cd ~/ros2_ws
+cd ~/Documents/research/robotics-lab/dev
 colcon build --packages-select depth_estimation_pkg
 source install/setup.bash
+```
+
+Launch:
+```bash
+ros2 launch depth_estimation_pkg depth_launch.py
 ```
 
 Controls: Press q to quit, s to save screenshot

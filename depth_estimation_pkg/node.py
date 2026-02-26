@@ -65,9 +65,18 @@ class DepthNode(Node):
         # CvBridge - conv btwn ROS imgs and OpenCV/numpy
         self.bridge = CvBridge()
 
+        self.declare_parameter('depth_scale', 0.075)
+        self.declare_parameter('depth_offset', 0.0)
+
+        scale = self.get_parameter('depth_scale').value
+        offset = self.get_parameter('depth_offset').value
+
         # load nn
-        self.estimator = DepthEstimator()
-        self.get_logger().info(f"Model loaded, using {self.estimator.device}")
+        self.estimator = DepthEstimator(scale=scale, offset=offset)
+        self.get_logger().info(
+            f"Model loaded, using {self.estimator.device} "
+            f"(scale={scale}, offset={offset})"
+        )
 
         # flag to prevent processing multiple imgs at once
         self.busy = False
@@ -100,7 +109,7 @@ class DepthNode(Node):
 
             self.get_logger().info(
                 f"Closest: {result['depth']:.2f}m @ ({result['x']}, {result['y']}) "
-                f"-> {result['direction'].upper()}"
+                f"-> {result['direction'].upper()} | Farthest: {depth_map.max():.2f}m"
             )
 
             # publish results
