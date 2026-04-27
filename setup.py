@@ -19,6 +19,10 @@ setup(
     entry_points={
         'console_scripts': [
             'depth_node = depth_estimation_pkg.node:main',
+            'force_viz = depth_estimation_pkg.force_viz:main',
+            'overlay = depth_estimation_pkg.overlay:main',
+            'validate = depth_estimation_pkg.validate:main',
+            'cbf_node = depth_estimation_pkg.cbf_node:main',
         ],
     },
 )
