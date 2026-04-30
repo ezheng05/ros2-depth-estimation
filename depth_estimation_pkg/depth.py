@@ -20,9 +20,9 @@ from PIL import Image
 from transformers import AutoImageProcessor, AutoModelForDepthEstimation
 
 # calibration: real_depth = scale * model_output + offset
-# measured: 0.5m -> 1.045, 1.0m -> 1.185 (mac webcam)
-DEPTH_SCALE = 3.57
-DEPTH_OFFSET = -3.23
+# calibrated for astra camera on limo
+DEPTH_SCALE = 0.2407
+DEPTH_OFFSET = 0.0502
 
 class DepthEstimator:
     """
