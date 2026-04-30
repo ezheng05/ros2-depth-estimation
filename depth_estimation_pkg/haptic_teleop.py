@@ -9,14 +9,14 @@ class HapticTeleopNode(Node):
     def __init__(self):
         super().__init__('haptic_teleop_node')
 
-        # position is in mm from driver, these scales convert to m/s
-        self.declare_parameter('dz', 15.0)       # dead zone in mm
-        self.declare_parameter('k_lin', 0.004)    # mm -> m/s
-        self.declare_parameter('k_ang', 0.004)    # mm -> rad/s
-        self.declare_parameter('f_scale', 0.05)   # cbf force -> device force
+        # position is in mm from driver
+        self.declare_parameter('dz', 5.0)         # dead zone in mm
+        self.declare_parameter('k_lin', 0.006)    # mm -> m/s (forward/back axis)
+        self.declare_parameter('k_ang', 0.006)    # mm -> rad/s (left/right axis)
+        self.declare_parameter('f_scale', 1.0)    # cbf force -> device force
         self.declare_parameter('f_max', 0.15)     # max force to device (N)
         self.declare_parameter('f_alpha', 0.3)    # low-pass filter coeff
-        self.declare_parameter('f_on', True)       # enable force feedback
+        self.declare_parameter('f_on', True)
 
         self.dz = self.get_parameter('dz').value
         self.k_lin = self.get_parameter('k_lin').value
@@ -46,14 +46,14 @@ class HapticTeleopNode(Node):
         return (abs(val) - dz) * k * sign
 
     def on_state(self, msg):
-        # position from omni_state driver is in mm
-        x = msg.pose.position.x
-        y = msg.pose.position.y
+        # position.y = forward/back axis (device -Z), positive = forward push
+        # position.x = left/right axis (device X)
+        fwd = msg.pose.position.y
+        lat = msg.pose.position.x
 
         cmd = Twist()
-        # negate x so natural forward push gives positive linear velocity
-        cmd.linear.x = max(-0.2, min(0.3, self.deadzone(-x, self.dz, self.k_lin)))
-        cmd.angular.z = max(-1.0, min(1.0, self.deadzone(y, self.dz, self.k_ang)))
+        cmd.linear.x = max(-0.2, min(0.3, self.deadzone(fwd, self.dz, self.k_lin)))
+        cmd.angular.z = max(-1.0, min(1.0, self.deadzone(-lat, self.dz, self.k_ang)))
         self.vel_pub.publish(cmd)
 
     def on_force(self, msg):
@@ -62,17 +62,20 @@ class HapticTeleopNode(Node):
             self.force_pub.publish(out)
             return
 
-        rx = msg.wrench.force.x * self.f_scale
-        ry = msg.wrench.torque.z * self.f_scale
+        fl = msg.wrench.force.x   # braking force -> forward/back axis
+        fa = msg.wrench.torque.z  # steering force -> left/right axis
 
-        # clamp magnitude
+        # braking on forward/back (device Z): force.y -> method_force[1] -> feedback[2]
+        # steering on left/right (device X): force.x -> method_force[0] -> feedback[0]
+        rx = fa * self.f_scale
+        ry = fl * self.f_scale
+
         mag = math.sqrt(rx*rx + ry*ry)
         if mag > self.f_max:
             s = self.f_max / mag
             rx *= s
             ry *= s
 
-        # low-pass filter to prevent jitter
         a = self.f_alpha
         self.fx = a * rx + (1.0 - a) * self.fx
         self.fy = a * ry + (1.0 - a) * self.fy
