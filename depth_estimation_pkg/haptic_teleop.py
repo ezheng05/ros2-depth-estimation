@@ -51,7 +51,8 @@ class HapticTeleopNode(Node):
         y = msg.pose.position.y
 
         cmd = Twist()
-        cmd.linear.x = max(-0.2, min(0.3, self.deadzone(x, self.dz, self.k_lin)))
+        # negate x so natural forward push gives positive linear velocity
+        cmd.linear.x = max(-0.2, min(0.3, self.deadzone(-x, self.dz, self.k_lin)))
         cmd.angular.z = max(-1.0, min(1.0, self.deadzone(y, self.dz, self.k_ang)))
         self.vel_pub.publish(cmd)
 
