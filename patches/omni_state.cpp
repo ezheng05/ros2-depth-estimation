@@ -257,24 +257,12 @@ public:
         
         if ((state->buttons[0] != state->buttons_prev[0]) or (state->buttons[1] != state->buttons_prev[1]))
         {
-            //if (state->buttons[0] == 1)
-            //{
-            //    state->close_gripper = !(state->close_gripper);
-            //}
-            //if (state->buttons[1] == 1)
-            //{
-            //    state->lock = !(state->lock);
-            //}
-            //state->close_gripper = state->buttons[0];
-            //state->lock = state->buttons[1];
             if ((state->buttons[0] == state->buttons[1]) and (state->buttons[0] == 1))
             {
-                //state->lock = !(state->lock);
-                if ((state->buttons[0] == state->buttons[1])
-                    and (state->buttons[0] == 1)) {
-                for(int i=0; i<3;i++)
-                    state->lock[i] = !(state->lock[i]);
-            }
+                // only lock the vertical axis (index 2) — x and y are control axes
+                state->lock[2] = !(state->lock[2]);
+                if (state->lock[2])
+                    state->lock_pos[2] = state->position[2];  // hold current height, not origin
             }
             omni_msgs::msg::OmniButtonEvent button_event;
             button_event.grey_button = state->buttons[0];
@@ -339,7 +327,7 @@ HDCallbackCode HDCALLBACK omni_state_callback(void *pUserData)
         if (!omni_state->lock[i])
             continue;
         double err = omni_state->lock_pos[i] - omni_state->position[i];
-        double kp = (i == 2) ? 0.04 : 0.03;
+        double kp = (i == 2) ? 0.3 : 0.03;  // stronger hold on vertical
         omni_state->force[i] += kp * err;
     }
 
